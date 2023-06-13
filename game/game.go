@@ -1,11 +1,11 @@
 package game
 
 import (
+	"fmt"
 	"poker/player"
 	"sync"
 )
 
-// Game represents a game instance
 type Game struct {
 	players []*player.Player
 	mutex   sync.Mutex
@@ -44,4 +44,54 @@ func (g *Game) GetPlayers() []*player.Player {
 	copy(players, g.players)
 	g.mutex.Unlock()
 	return players
+}
+func (g *Game) PlayPoker() {
+	// Initialize the game
+	deck := logic.createDeck()
+	pot := 0
+	bigBlind := 10
+	smallBlind := bigBlind / 2
+	dealerIndex := 0
+	currentBet := bigBlind
+	communityCards := make([]Card, 0)
+	activePlayers := make([]*player.Player, len(g.players))
+	copy(activePlayers, g.players)
+
+	// Main game loop
+	for len(activePlayers) > 1 {
+		// Reset the game state for a new round
+		resetGame(&deck, &pot, &communityCards, &activePlayers)
+		rotateDealer(&dealerIndex, len(activePlayers))
+		postBlinds(&activePlayers, dealerIndex, smallBlind, bigBlind)
+		dealCards(&deck, &activePlayers)
+
+		// Pre-flop
+		bettingRound(&activePlayers, dealerIndex, currentBet)
+
+		// Flop
+		revealCommunityCards(&deck, &communityCards, 3)
+		bettingRound(&activePlayers, dealerIndex, currentBet)
+
+		// Turn
+		revealCommunityCards(&deck, &communityCards, 1)
+		bettingRound(&activePlayers, dealerIndex, currentBet)
+
+		// River
+		revealCommunityCards(&deck, &communityCards, 1)
+		bettingRound(&activePlayers, dealerIndex, currentBet)
+
+		// Showdown
+		winners := determineWinners(&activePlayers, &communityCards)
+		distributePot(&pot, winners)
+
+		// Remove players with no chips left
+		activePlayers = removeBustedPlayers(&activePlayers)
+	}
+
+	// Declare the winner
+	if len(activePlayers) == 1 {
+		fmt.Printf("Player %s wins the game!\n", activePlayers[0].Name)
+	} else {
+		fmt.Println("No active players remaining. The game ends in a draw.")
+	}
 }

@@ -50,7 +50,7 @@ func (m *Manager) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create a new player
-	player := player.NewPlayer()
+	player := player.NewPlayer("datnt", 100)
 
 	// Add the player to the game
 	m.mutex.Lock()
